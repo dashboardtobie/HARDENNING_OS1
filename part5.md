@@ -194,22 +194,127 @@ Last login: Wed Feb  5 02:47:33 2025 from 192.168.133.128
 
 🌞 **Proposer au moins 5 configurations supplémentaires qui permettent de renforcer la sécurité du serveur OpenSSH**
 
-> Je vous recommande fooooortement de vous inspirer de ressources d'Internet pour ça. Regardez par exemple le guide de l'ANSSI à ce sujet (obsolète, mais la plupart des principes sont toujours valides), ou encore le guide CIS sur le sujet, ou l'excellent guide Mozilla sur le sujet, . Il existe d'autres ressources de confiance, à votre meilleur moteur de recherches !
+```
+[dash@localhost ~]$ sudo nano /etc/ssh/sshd_config
+# Autoriser uniquement certains utilisateurs ou memnbres de groupe à se connecter par ssh
+AllowUsers dash
+AllowGroups sshusers
+
+# Empeche une attaque ddos en limitant le nombre de connexion simultané
+MaxStartups 2:30:10
+
+# Activer le stictmode pour empêcher SSH d’utiliser des clés ou fichiers mal configurés
+StrictModes yes
+
+# Bloquer la redirection de ports qui peut être exploitée pour échapper aux restrictions réseau et faire du tunneling SSH malveillant
+AllowTcpForwarding no
+PermitTunnel no
+
+# Éviter qu’une session SSH inutilisée reste ouverte indéfiniment et soit compromise
+ClientAliveInterval 300
+ClientAliveCountMax 2
+
+[dash@localhost ~]$ sudo systemctl restart sshd
+```
 
 ## 5. fail2ban
 
-> Un outil extrêmement récurrent dans le monde Linux : un premier rempart contre les attaques de bruteforce.
-
 🌞 **Installer fail2ban sur la machine**
+```
+[dash@localhost ~]$ sudo yum install epel-release -y
+[dash@localhost ~]$ sudo yum install fail2ban -y
+```
 
 🌞 **Configurer fail2ban**
 
 - en cas de multiples tentatives de connexion échouées sur le serveur SSH, l'utilisateur sera banni
 - précisément : après 7 tentatives de connexion échouées en moins de 5 minutes
 - c'est l'adresse IP de la personne qui fait des connexions échouées de façon répétée qui est blacklistée
+```
+[dash@localhost ~]$ sudo systemctl enable --now fail2ban
+Created symlink /etc/systemd/system/multi-user.target.wants/fail2ban.service → /usr/lib/systemd/system/fail2ban.service.
+[dash@localhost ~]$ sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
+[dash@localhost ~]$ sudo nano /etc/fail2ban/jail.local
+ [sshd]
+ enabled = true
+ port = 2222
+ filter = sshd
+ logpath = /var/log/auth.log
+ maxretry = 7
+ findtime = 300
+[dash@localhost ~]$ sudo systemctl restart fail2ban
+[dash@localhost ~]$ sudo systemctl status fail2ban
+● fail2ban.service - Fail2Ban Service
+     Loaded: loaded (/usr/lib/systemd/system/fail2ban.service; enabled; preset: disabled)
+     Active: active (running) since Wed 2025-02-05 11:26:21 CET; 8s ago
+       Docs: man:fail2ban(1)
+    Process: 17891 ExecStartPre=/bin/mkdir -p /run/fail2ban (code=exited, status=0/SUCCESS)
+   Main PID: 17892 (fail2ban-server)
+      Tasks: 5 (limit: 2665)
+     Memory: 12.1M
+        CPU: 128ms
+     CGroup: /system.slice/fail2ban.service
+             └─17892 /usr/bin/python3 -s /usr/bin/fail2ban-server -xf start
+
+Feb 05 11:26:21 localhost.localdomain systemd[1]: Starting Fail2Ban Service...
+Feb 05 11:26:21 localhost.localdomain systemd[1]: Started Fail2Ban Service.
+Feb 05 11:26:21 localhost.localdomain fail2ban-server[17892]: Server ready
+[dash@localhost ~]$ 
+```
 
 🌞 **Prouvez que fail2ban est effectif**
 
 - faites-vous ban
+```
+PS C:\Users\th3dash> ssh dash@192.168.133.129 -p 2222
+dash@192.168.133.129's password:
+Permission denied, please try again.
+dash@192.168.133.129's password:
+Permission denied, please try again.
+dash@192.168.133.129's password:
+dash@192.168.133.129: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password).
+PS C:\Users\th3dash> ssh dash@192.168.133.129 -p 2222
+dash@192.168.133.129's password:
+Permission denied, please try again.
+dash@192.168.133.129's password:
+Permission denied, please try again.
+dash@192.168.133.129's password:
+dash@192.168.133.129: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password).
+PS C:\Users\th3dash> ssh dash@192.168.133.129 -p 2222
+dash@192.168.133.129's password:
+Permission denied, please try again.
+dash@192.168.133.129's password:
+ssh_dispatch_run_fatal: Connection to 192.168.133.129 port 2222: Connection timed out
+PS C:\Users\th3dash>
+```
 - montrez l'état de la jail fail2ban pour voir quelles IP sont ban
+```
+[dash@localhost ~]$ sudo fail2ban-client status sshd
+Status for the jail: sshd
+|- Filter
+|  |- Currently failed:	0
+|  |- Total failed:	7
+|  `- Journal matches:	_SYSTEMD_UNIT=sshd.service + _COMM=sshd
+`- Actions
+   |- Currently banned:	1
+   |- Total banned:	1
+   `- Banned IP list:	192.168.133.1
+[dash@localhost ~]$ 
+```
 - levez le ban avec une commande adaptée
+```
+[dash@localhost ~]$ sudo fail2ban-client set sshd unbanip 192.168.133.1
+1
+[dash@localhost ~]$ sudo fail2ban-client status sshd
+Status for the jail: sshd
+|- Filter
+|  |- Currently failed:	0
+|  |- Total failed:	7
+|  `- Journal matches:	_SYSTEMD_UNIT=sshd.service + _COMM=sshd
+`- Actions
+   |- Currently banned:	0
+   |- Total banned:	1
+   `- Banned IP list:	
+[dash@localhost ~]$ 
+```
+
