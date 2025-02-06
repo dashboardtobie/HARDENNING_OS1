@@ -31,12 +31,22 @@ Filesystem          Type  Size  Used Avail Use% Mounted on
 
 🌞 **Déterminer les options de montage de la partition `/`**
 
-- expliquer chaque option de montage configurées pour `/`
 ```
 [dash@localhost ~]$ findmnt -o OPTIONS /
 OPTIONS
 rw,relatime,seclabel,attr2,inode64,logbufs=8,logbsize=32k,noquota
 ```
+
+- expliquer chaque option de montage configurées pour `/`
+`rw` (read/write) : Monte le système de fichiers en lecture et écriture
+`relatime` : Met à jour l'horodatage d'accès (atime) des fichiers uniquement si la dernière mise à jour de l’atime est plus ancienne que la dernière modification (mtime) ou le dernier changement d’état (ctime)
+`seclabel` : Active la gestion des étiquettes de sécurité pour SELinux
+`attr2` : Optimise l’utilisation des attributs étendus (xattr) pour XFS
+`inode64` : Active l’utilisation d’inodes 64 bits sur XFS (Permet de gérer un nombre beaucoup plus grand de fichiers sur des systèmes de fichiers de grande taille)
+`logbufs=8` : Définit le nombre de tampons (buffers) utilisés pour les journaux XFS. Plus de buffers = meilleure performance d’écriture (surtout pour les fichiers de grande taille)
+`logbsize=32k` : Définit la taille des blocs des journaux XFS. Une taille plus grande améliore la vitesse d’écriture sur disque en réduisant le nombre d’opérations d’écriture
+`noquota` : Désactive la gestion des quotas (limites d’espace disque par utilisateur/groupe)
+
 
 🌞 **Monter une partition de type `tmpfs` sur le dossier `/tmp`**
 
