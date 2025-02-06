@@ -35,7 +35,9 @@ dash@192.168.133.129's password:
 Last login: Tue Feb  4 23:40:48 2025 from 192.168.133.128
 [dash@localhost ~]$
 ```
-- expliquez pourquoi on considère parfois utile de changer le port d'écoute par défaut du serveur SSH
+- expliquez pourquoi on considère parfois utile de changer le port d'écoute par défaut du serveur SSH  
+
+Changer le port SSH par défaut (22) permet de réduire les attaques automatisées et les scans de bots, rendant votre serveur moins visible aux attaquants opportunistes. Toutefois cela ne représente pas une mésure de sécurité suffisante.
 
 
 ## 2. Authentication modes
